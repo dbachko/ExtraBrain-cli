@@ -245,13 +245,23 @@ On both, downloads are checked against the release's `SHA256SUMS` before anythin
 
 Use `--json` to get `{ "code": number, "data": object | null, "message": string }`. Exit codes: `0` success, `1` failure, `2` usage, `3` app not running, `4` authentication or revocation, `5` conflict, `6` partial batch, `7` protected storage unavailable, `8` unsupported API or capability.
 
-- The CLI talks to the app over a local-only connection (`127.0.0.1`) and needs no password or token. It never starts the app or reads its database.
-- `extrabrain pair` keeps its credential in the macOS Keychain on a Mac, or in a file protected with Windows DPAPI under `%LOCALAPPDATA%\ExtraBrain` on Windows. There is no plaintext fallback.
+- The current `capabilities`, `documents`, `profiles`, and `sessions` commands use the app's local API at `127.0.0.1` without a password, bearer token, or CLI pairing. They never start the app or read its database. The desktop app must already be running; this is a local desktop workflow, not a remote service or headless CI integration.
+- The separate `extrabrain pair` command requests a scoped credential and stores it in the macOS Keychain on a Mac, or in a file protected with Windows DPAPI under `%LOCALAPPDATA%\ExtraBrain` on Windows. There is no plaintext fallback. The commands listed above do not use this credential. External MCP clients have their own [pairing and revocation flow](https://extrabrain.app/help/settings/mcp-connections/).
 - Interrupted imports are remembered in `~/.local/state/extrabrain/imports` on a Mac and `%LOCALAPPDATA%\ExtraBrain\state\imports` on Windows, so `documents resume` can continue them.
 - Put file paths that begin with `-` after `--`. Symlinks and non-regular files are rejected. The CLI reads files from its own filesystem, so a sandboxed or remote agent cannot import a desktop-only path.
 - Deleting requires one document ID and its current revision. On a revision conflict, read the document again and confirm with the user instead of retrying.
 - List commands accept `--limit` and `--cursor`; time filters (`--since`, `--until`) are Unix seconds. Follow `data.nextCursor` to page through results.
 - Profile changes send a revision and request ID. Use `--revision <n> --request-id <id>` to retry an exact request safely.
+
+These commands do not prompt for input and can run with stdin closed. For example, on a Mac with ExtraBrain already open:
+
+```sh
+extrabrain --json capabilities </dev/null
+extrabrain --json documents list </dev/null
+extrabrain --json sessions list --limit 10 </dev/null
+```
+
+Read the JSON `code` and the process exit status to handle failures. For example, an unavailable app returns exit code `3`; an unsupported API or capability returns `8`. Some profile features require ExtraBrain Pro. The CLI's MIT license covers this repository, not the separate desktop application.
 
 </details>
 
